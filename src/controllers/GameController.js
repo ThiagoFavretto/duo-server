@@ -95,7 +95,6 @@ module.exports = {
 
     const isNumero = (valor) => /^[0-9]$/.test(valor);
 
-
     let indicePrimeiraNumerica = sala.baralho.findIndex(carta =>
       isNumero(carta.valor) && carta.cor !== "#000"
     );
@@ -147,6 +146,12 @@ module.exports = {
 
     if (indexCarta === -1) {
       return res.status(400).json({ erro: "Você não tem essa carta" });
+    }
+
+    const a = sala.descarte.length - 1;
+
+    if (carta.cor != a.cor && carta.valor != a.valor) {
+      return res.status(400).json({ erro: "Cor ou numero errado" });
     }
 
     jogador.cartas.splice(indexCarta, 1);
