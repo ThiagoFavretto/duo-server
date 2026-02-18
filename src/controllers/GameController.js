@@ -62,9 +62,9 @@ module.exports = {
 
     const player = sala.jogadores.find(j => j.id === codigoJogador);
 
-    // if (!player.host) {
-    //   return res.status(404).json({ erro: "Apenas o host pode começar" });
-    // }
+    if (!player.host) {
+      return res.status(404).json({ erro: "Apenas o host pode começar" });
+    }
 
     const cores = ["#D72600", "#0956BF", "#379711", "#ECD407"];
     const valores = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "pular", "inverter", "+2"];
@@ -176,7 +176,7 @@ module.exports = {
     }
 
     req.io.to(codigoSala).emit("cartaJogada", {
-      cartaMesa: sala.descarte[0],
+      cartaMesa: sala.descarte[sala.descarte.length - 1],
       jogadorAtual: sala.jogadorAtual,
       cartasJogadorRestantes: jogador.cartas.length
     });
