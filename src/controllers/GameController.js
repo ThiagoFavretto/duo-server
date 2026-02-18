@@ -149,7 +149,7 @@ module.exports = {
     }
 
     const a = sala.descarte.length - 1;
-
+    console.log(a, 'carta')
     if (carta.cor != a.cor && carta.valor != a.valor) {
       return res.status(400).json({ erro: "Cor ou numero errado" });
     }
