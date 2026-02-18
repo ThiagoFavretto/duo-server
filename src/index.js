@@ -8,7 +8,7 @@ const { salas } = require("./data/sala");
 const prod = true
 const io = require("socket.io")(server, {
   cors: {
-    origin: prod ? "https://duo-web2.netlify.app/" : "http://localhost:5173",
+    origin: prod ? "https://duo-web2.netlify.app" : "http://localhost:5173",
     methods: ["GET", "POST"]
   }
 });
