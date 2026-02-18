@@ -4,9 +4,11 @@ const routes = require("./routes");
 const httpServer = express();
 const server = require("http").Server(httpServer);
 const { salas } = require("./data/sala");
+
+const prod = true
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: prod ? "https://duo-web2.netlify.app/" : "http://localhost:5173",
     methods: ["GET", "POST"]
   }
 });
@@ -58,4 +60,4 @@ httpServer.use(cors());
 httpServer.use(express.json());
 httpServer.use(routes);
 
-server.listen(process.env.PORT || 3000);
+server.listen(process.env.PORT || 3333);
