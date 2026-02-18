@@ -148,7 +148,7 @@ module.exports = {
       return res.status(400).json({ erro: "Você não tem essa carta" });
     }
 
-    const a = sala.descarte.length - 1;
+    const a = sala.descarte[sala.descarte.length - 1];
     console.log(a, 'carta')
     if (carta.cor != a.cor && carta.valor != a.valor) {
       return res.status(400).json({ erro: "Cor ou numero errado" });
