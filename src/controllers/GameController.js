@@ -92,7 +92,21 @@ module.exports = {
     });
 
     sala.baralho = baralho;
-    sala.descarte = [sala.baralho.shift()];
+
+    const isNumero = (valor) => /^[0-9]$/.test(valor);
+
+
+    let indicePrimeiraNumerica = sala.baralho.findIndex(carta =>
+      isNumero(carta.valor) && carta.cor !== "#000"
+    );
+
+    if (indicePrimeiraNumerica === -1) {
+      throw new Error("Nenhuma carta numérica encontrada no baralho.");
+    }
+
+    const primeiraCarta = sala.baralho.splice(indicePrimeiraNumerica, 1)[0];
+
+    sala.descarte = [primeiraCarta];
     sala.jogadorAtual = sala.jogadores[Math.floor(Math.random() * sala.jogadores.length)].id;
     sala.sentido = 1;
     sala.status = "jogando";
@@ -116,7 +130,7 @@ module.exports = {
 
   async jogarCarta(req, res) {
     const { codigoSala, carta } = req.body;
-    const codigoJogador = req.headers["x-player-id"];
+    const codigoJogador = req.headers["codigojogador"];
 
     const sala = salas.find(s => s.codigoSala === codigoSala);
 
@@ -132,7 +146,7 @@ module.exports = {
     );
 
     if (indexCarta === -1) {
-      return res.status(400).json({ erro: "Carta inválida" });
+      return res.status(400).json({ erro: "Você não tem essa carta" });
     }
 
     jogador.cartas.splice(indexCarta, 1);
@@ -145,6 +159,7 @@ module.exports = {
 
       case "pular":
         proximoJogador(sala);
+        proximoJogador(sala);
         break;
 
       case "+2":
@@ -156,16 +171,15 @@ module.exports = {
         break;
 
       default:
-        // nenhuma ação extra
+        proximoJogador(sala);
         break;
     }
 
-    // Passa para o próximo jogador
-    if (carta.valor !== "pular" && carta.valor !== "+2" && carta.valor !== "+4") {
-      proximoJogador(sala);
-    }
-
-    req.io.to(codigoSala).emit("estadoAtualizado");
+    req.io.to(codigoSala).emit("cartaJogada", {
+      cartaMesa: sala.descarte[0],
+      jogadorAtual: sala.jogadorAtual,
+      cartasJogadorRestantes: jogador.cartas.length
+    });
 
     return res.json({ ok: true });
   }
