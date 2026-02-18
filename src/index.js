@@ -58,4 +58,4 @@ httpServer.use(cors());
 httpServer.use(express.json());
 httpServer.use(routes);
 
-server.listen(3333);
+server.listen(process.env.PORT || 3000);
