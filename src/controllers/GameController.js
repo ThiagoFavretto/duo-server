@@ -253,14 +253,19 @@ module.exports = {
 
     const jogador = sala.jogadores.find(j => j.id === codigoJogador);
 
-    if (sala.baralho.length == 0) {
-      sala.baralho = sala.descarte.slice(0, -1);
-      sala.descarte = [sala.descarte[sala.descarte.length - 1]]
+    const total = sala.acumulador > 0 ? sala.acumulador : 1
+    for (let i = 0; i < total; i++) {
+      if (sala.baralho.length == 0) {
+        sala.baralho = sala.descarte.slice(0, -1);
+        sala.descarte = [sala.descarte[sala.descarte.length - 1]]
 
-      baralho.sort(() => Math.random() - 0.5);
+        baralho.sort(() => Math.random() - 0.5);
+      }
+
+      jogador.cartas.push(sala.baralho.shift());
     }
 
-    jogador.cartas.push(sala.baralho.shift());
+    sala.acumulador = 0;
 
     const socketId = req.connectUsers[jogador.id];
 
