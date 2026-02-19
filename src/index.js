@@ -32,14 +32,20 @@ io.on("connection", socket => {
   }
 
   socket.on("disconnect", () => {
-    const sala = salas.find(s => s.codigoSala === codigoSala);
+    const salaIndex = salas.findIndex(s => s.codigoSala === codigoSala);
 
-    if (sala) {
+    if (salaIndex !== -1) {
+      const sala = salas[salaIndex];
+
       sala.jogadores = sala.jogadores.filter(
         j => j.id !== codigoJogador
       );
 
-      io.to(codigoSala).emit("novoJogador", sala.jogadores);
+      if (sala.jogadores.length === 0) {
+        salas.splice(salaIndex, 1);
+      } else {
+        io.to(codigoSala).emit("novoJogador", sala.jogadores);
+      }
     }
 
     delete connectUsers[codigoJogador];

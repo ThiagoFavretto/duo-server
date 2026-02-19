@@ -10,5 +10,6 @@ routes.post("/login/entrar", LoginController.entrar);
 
 routes.get("/game/comecar/:codigoSala", GameController.comecar);
 routes.post("/game/jogarCarta", GameController.jogarCarta);
+routes.get("/game/comprarCarta/:codigoSala", GameController.comprarCarta);
 
 module.exports = routes;

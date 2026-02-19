@@ -23,25 +23,36 @@ function obterProximoJogador(sala) {
   if (novoIndex >= sala.jogadores.length) novoIndex = 0;
   if (novoIndex < 0) novoIndex = sala.jogadores.length - 1;
 
-  return sala.jogadores[novoIndex].id;
+  return sala.jogadores[novoIndex];
 }
 
-function aplicarCompraAcumulada(sala, qtd) {
+function aplicarCompraAcumulada(sala, qtd, req) {
   let proximo = obterProximoJogador(sala);
   const temAcumulavel = proximo.cartas.some(c => c.valor === `+${qtd}`);
 
   if (temAcumulavel) {
-    // Se tiver, ele pode jogar para acumular
-    // Não compra ainda, espera a jogada do próximo
     sala.acumulador = (sala.acumulador || 0) + qtd;
   } else {
-    // Se não tiver, compra todas as cartas acumuladas
     const total = (sala.acumulador || 0) + qtd;
     for (let i = 0; i < total; i++) {
+      if (sala.baralho.length == 0) {
+        sala.baralho = sala.descarte.slice(0, -1);
+        sala.descarte = [sala.descarte[sala.descarte.length - 1]]
+
+        baralho.sort(() => Math.random() - 0.5);
+      }
+
       proximo.cartas.push(sala.baralho.shift());
     }
     sala.acumulador = 0;
-    sala.jogadorAtual = proximo.id; // passa a vez para ele depois da compra
+
+    const socketId = req.connectUsers[proximo.id];
+
+    req.io.to(socketId).emit("suasCartas", {
+      cartas: proximo.cartas
+    });
+
+    proximoJogador(sala);
   }
 }
 
@@ -123,7 +134,6 @@ module.exports = {
       jogadorAtual: sala.jogadorAtual
     });
 
-
     return res.json({ ok: true });
   },
 
@@ -140,26 +150,68 @@ module.exports = {
     }
 
     const jogador = sala.jogadores.find(j => j.id === codigoJogador);
-    const indexCarta = jogador.cartas.findIndex(
-      c => c.cor === carta.cor && c.valor === carta.valor
-    );
 
-    if (indexCarta === -1) {
-      return res.status(400).json({ erro: "Você não tem essa carta" });
-    }
+    const cartaSala = sala.descarte[sala.descarte.length - 1];
 
-    const a = sala.descarte[sala.descarte.length - 1];
-    console.log(a, 'carta')
-    if (carta.cor != a.cor && carta.valor != a.valor) {
+    if (sala.acumulador > 0) {
+      if (carta.valor != cartaSala.valor) {
+        return res.status(400).json({ erro: "Cor ou numero errado" });
+      }
+    } else if ((carta.valor != "coringa" && carta.valor != "+4") && carta.cor != cartaSala.cor && carta.valor != cartaSala.valor) {
       return res.status(400).json({ erro: "Cor ou numero errado" });
     }
 
-    jogador.cartas.splice(indexCarta, 1);
-    sala.descarte.push(carta);
+    if (sala.status == "coringa") {
+      if (!carta.cor || carta.cor == "#000") {
+        return res.status(400).json({ erro: "Selecione uma cor" });
+      }
+
+      sala.descarte[sala.descarte.length - 1].cor = carta.cor
+    } else {
+      const indexCarta = jogador.cartas.findIndex(
+        c => c.cor === carta.cor && c.valor === carta.valor
+      );
+
+      if (indexCarta === -1) {
+        return res.status(400).json({ erro: "Você não tem essa carta" });
+      }
+
+      sala.descarte.push(carta);
+      jogador.cartas.splice(indexCarta, 1);
+
+      if (jogador.cartas.length == 0) {
+
+        req.io.to(codigoSala).emit("ganhador", {
+          ganhador: jogador.nick
+        });
+
+        atualizarMesa(codigoSala, req);
+        return res.json({ ok: true });
+      }
+
+      if ((carta.valor == "coringa" || carta.valor == "+4") && carta.cor == "#000") {
+        sala.status = "coringa";
+        const socketId = req.connectUsers[jogador.id];
+
+        req.io.to(socketId).emit("coringaJogado");
+
+        atualizarMesa(codigoSala, req);
+
+        return res.json({ ok: true });
+      }
+    }
+
+    sala.status = "jogando";
 
     switch (carta.valor) {
       case "inverter":
-        sala.sentido *= -1;
+        if (sala.jogadores.length > 2) {
+          sala.sentido *= -1;
+          proximoJogador(sala);
+        } else {
+          proximoJogador(sala);
+          proximoJogador(sala);
+        }
         break;
 
       case "pular":
@@ -168,11 +220,13 @@ module.exports = {
         break;
 
       case "+2":
-        aplicarCompraAcumulada(sala, 2);
+        aplicarCompraAcumulada(sala, 2, req);
+        proximoJogador(sala);
         break;
 
       case "+4":
-        aplicarCompraAcumulada(sala, 4);
+        aplicarCompraAcumulada(sala, 4, req);
+        proximoJogador(sala);
         break;
 
       default:
@@ -180,12 +234,60 @@ module.exports = {
         break;
     }
 
-    req.io.to(codigoSala).emit("cartaJogada", {
-      cartaMesa: sala.descarte[sala.descarte.length - 1],
-      jogadorAtual: sala.jogadorAtual,
-      cartasJogadorRestantes: jogador.cartas.length
+    atualizarMesa(codigoSala, req);
+
+    return res.json({ ok: true });
+  },
+
+  async comprarCarta(req, res) {
+    const codigoJogador = req.headers["codigojogador"];
+    const { codigoSala } = req.params;
+
+    const sala = salas.find(s => s.codigoSala === codigoSala);
+
+    if (!sala) return res.status(404).json({ erro: "Sala não encontrada" });
+
+    if (sala.jogadorAtual !== codigoJogador) {
+      return res.status(400).json({ erro: "Não é sua vez" });
+    }
+
+    const jogador = sala.jogadores.find(j => j.id === codigoJogador);
+
+    if (sala.baralho.length == 0) {
+      sala.baralho = sala.descarte.slice(0, -1);
+      sala.descarte = [sala.descarte[sala.descarte.length - 1]]
+
+      baralho.sort(() => Math.random() - 0.5);
+    }
+
+    jogador.cartas.push(sala.baralho.shift());
+
+    const socketId = req.connectUsers[jogador.id];
+
+    req.io.to(socketId).emit("suasCartas", {
+      cartas: jogador.cartas
     });
+
+    proximoJogador(sala);
+
+    atualizarMesa(codigoSala, req);
 
     return res.json({ ok: true });
   }
 };
+
+function atualizarMesa(codigoSala, req) {
+  const sala = salas.find(s => s.codigoSala === codigoSala);
+
+  const listaJogador = sala.jogadores.map(jogador => ({
+    id: jogador.id,
+    cartasJogadorRestante: jogador.cartas.length
+  }));
+
+  req.io.to(codigoSala).emit("atualizarMesa", {
+    jogadores: listaJogador,
+    jogadorAtual: sala.jogadorAtual,
+    cartaMesa: sala.descarte[sala.descarte.length - 1],
+    acumulador: sala.acumulador
+  });
+}

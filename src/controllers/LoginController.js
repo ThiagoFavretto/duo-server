@@ -22,8 +22,6 @@ module.exports = {
       }]
     })
 
-    console.log(salas.length)
-
     return res.json({ codigoSala, codigoJogador });
   },
 
