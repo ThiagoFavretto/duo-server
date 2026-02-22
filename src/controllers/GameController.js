@@ -39,11 +39,12 @@ function aplicarCompraAcumulada(sala, qtd, req) {
         sala.baralho = sala.descarte.slice(0, -1);
         sala.descarte = [sala.descarte[sala.descarte.length - 1]]
 
-        baralho.sort(() => Math.random() - 0.5);
+        sala.baralho.sort(() => Math.random() - 0.5);
       }
 
       proximo.cartas.push(sala.baralho.shift());
     }
+
     sala.acumulador = 0;
 
     const socketId = req.connectUsers[proximo.id];
