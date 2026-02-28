@@ -21,7 +21,7 @@ io.on("connection", socket => {
   if (codigoSala) {
     const sala = salas.find(s => s.codigoSala === codigoSala);
 
-    if (sala) {
+    if (sala && sala.status != "jogando") {
       socket.join(codigoSala);
       connectUsers[codigoJogador] = socket.id;
 

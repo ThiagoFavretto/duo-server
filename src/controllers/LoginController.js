@@ -34,6 +34,10 @@ module.exports = {
       return res.status(404).json({ erro: "Sala não encontrada" });
     }
 
+    if (sala.status == "jogando") {
+      return res.status(404).json({ erro: "Partida em andamento" });
+    }
+
     const codigoJogador = crypto.randomUUID()
 
     sala.jogadores.push({
